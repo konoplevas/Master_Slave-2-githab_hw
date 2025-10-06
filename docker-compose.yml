@@ -1,0 +1,119 @@
+version: '3.8'
+
+services:
+
+Shard 1 - Users
+mysql-shard1-master:
+image: mysql:8.0
+container_name: mysql-shard1-master
+environment:
+MYSQL_ROOT_PASSWORD: rootpass
+MYSQL_DATABASE: shard1_users
+MYSQL_REPLICATION_USER: repl
+MYSQL_REPLICATION_PASSWORD: replpass
+ports:
+- "3307:3306"
+volumes:
+- ./config/init-master.sql:/docker-entrypoint-initdb.d/init-master.sql
+- ./config/sharding-config.sql:/docker-entrypoint-initdb.d/sharding-config.sql
+command:
+- --server-id=1
+- --log-bin=mysql-bin
+- --binlog-format=ROW
+- --gtid-mode=ON
+- --enforce-gtid-consistency=ON
+
+mysql-shard1-slave:
+image: mysql:8.0
+container_name: mysql-shard1-slave
+environment:
+MYSQL_ROOT_PASSWORD: rootpass
+MYSQL_DATABASE: shard1_users
+ports:
+- "3308:3306"
+volumes:
+- ./config/init-slave.sql:/docker-entrypoint-initdb.d/init-slave.sql
+depends_on:
+- mysql-shard1-master
+
+Shard 2 - Books
+mysql-shard2-master:
+image: mysql:8.0
+container_name: mysql-shard2-master
+environment:
+MYSQL_ROOT_PASSWORD: rootpass
+MYSQL_DATABASE: shard2_books
+MYSQL_REPLICATION_USER: repl
+MYSQL_REPLICATION_PASSWORD: replpass
+ports:
+- "3309:3306"
+volumes:
+- ./config/init-master.sql:/docker-entrypoint-initdb.d/init-master.sql
+- ./config/sharding-config.sql:/docker-entrypoint-initdb.d/sharding-config.sql
+command:
+- --server-id=2
+- --log-bin=mysql-bin
+- --binlog-format=ROW
+- --gtid-mode=ON
+- --enforce-gtid-consistency=ON
+
+mysql-shard2-slave:
+image: mysql:8.0
+container_name: mysql-shard2-slave
+environment:
+MYSQL_ROOT_PASSWORD: rootpass
+MYSQL_DATABASE: shard2_books
+ports:
+- "3310:3306"
+volumes:
+- ./config/init-slave.sql:/docker-entrypoint-initdb.d/init-slave.sql
+depends_on:
+- mysql-shard2-master
+
+Shard 3 - Shops
+mysql-shard3-master:
+image: mysql:8.0
+container_name: mysql-shard3-master
+environment:
+MYSQL_ROOT_PASSWORD: rootpass
+MYSQL_DATABASE: shard3_shops
+MYSQL_REPLICATION_USER: repl
+MYSQL_REPLICATION_PASSWORD: replpass
+ports:
+- "3311:3306"
+volumes:
+- ./config/init-master.sql:/docker-entrypoint-initdb.d/init-master.sql
+- ./config/sharding-config.sql:/docker-entrypoint-initdb.d/sharding-config.sql
+command:
+- --server-id=3
+- --log-bin=mysql-bin
+- --binlog-format=ROW
+- --gtid-mode=ON
+- --enforce-gtid-consistency=ON
+
+mysql-shard3-slave:
+image: mysql:8.0
+container_name: mysql-shard3-slave
+environment:
+MYSQL_ROOT_PASSWORD: rootpass
+MYSQL_DATABASE: shard3_shops
+ports:
+- "3312:3306"
+volumes:
+- ./config/init-slave.sql:/docker-entrypoint-initdb.d/init-slave.sql
+depends_on:
+- mysql-shard3-master
+
+ProxySQL for sharding
+proxysql:
+image: proxysql/proxysql:latest
+container_name: proxysql-sharding
+ports:
+- "6032:6032"
+- "6033:6033"
+volumes:
+- ./config/proxysql.cnf:/etc/proxysql.cnf
+depends_on:
+- mysql-shard1-master
+- mysql-shard2-master
+- mysql-shard3-master
